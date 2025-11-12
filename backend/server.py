@@ -7,6 +7,7 @@ import hashlib
 from datetime import datetime
 import json
 from pathlib import Path
+from analysis import check_spf, check_dkim, check_dmarc, check_sender_mismatch, check_all_authentication
 
 app = Flask(__name__)
 
@@ -138,6 +139,10 @@ def analyze_email():
         
         # Parse the email
         parsed_data = parse_eml_file(file_content)
+
+        # Run all authentication checks
+        parsed_data['authentication_result'] = check_all_authentication(parsed_data['headers'])
+
         
         # Write parsed data to a new local text file in the backend directory
         try:
@@ -157,6 +162,7 @@ def analyze_email():
             saved_file_path = None
         
         # Here you would add your phishing detection logic
+
         # For now, just return the parsed data
         
         resp = {
