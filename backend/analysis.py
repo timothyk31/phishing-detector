@@ -1,4 +1,5 @@
 import re
+
 def check_spf(spf_header):
     """
     Check SPF (Sender Policy Framework) authentication results.

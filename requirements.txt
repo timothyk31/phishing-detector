@@ -1,3 +1,7 @@
 flask==3.0.0
 email-validator==2.1.0
 requests==2.31.0
+pyspf
+dkimpy
+dnspython
+python-dotenv

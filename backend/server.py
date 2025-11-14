@@ -8,7 +8,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 from analysis import check_spf, check_dkim, check_dmarc, check_sender_mismatch, check_all_authentication
-
+from externalChecks import checkSafeBrowsing
 app = Flask(__name__)
 
 def parse_eml_file(file_content):
@@ -142,6 +142,13 @@ def analyze_email():
 
         # Run all authentication checks
         parsed_data['authentication_result'] = check_all_authentication(parsed_data['headers'])
+
+        #Run Safe Browsing check on extracted URLs
+        if parsed_data['urls']:
+            safebrowsing_result = checkSafeBrowsing(parsed_data['urls'])
+            parsed_data['safebrowsing'] = safebrowsing_result
+        else:
+            parsed_data['safebrowsing'] = {}
 
         
         # Write parsed data to a new local text file in the backend directory
