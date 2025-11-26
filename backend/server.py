@@ -8,7 +8,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 from analysis import check_spf, check_dkim, check_dmarc, check_sender_mismatch, check_all_authentication
-from externalChecks import checkSafeBrowsing
+from externalChecks import checkSafeBrowsing, check_url_scan
 app = Flask(__name__)
 
 def parse_eml_file(file_content):
@@ -71,6 +71,13 @@ def parse_eml_file(file_content):
     urls_in_text = re.findall(url_pattern, body_text)
     urls_in_html = re.findall(url_pattern, body_html)
     all_urls = list(set(urls_in_text + urls_in_html))  # Remove duplicates
+
+    for url in all_urls:
+        url_scan_result = check_url_scan(url)
+        if url_scan_result['results']:
+            all_urls[url] = url_scan_result['results']
+        else:
+            all_urls[url] = {}
     
     # Extract attachments
     attachments = []

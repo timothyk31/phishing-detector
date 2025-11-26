@@ -1,5 +1,15 @@
 import re
+from urllib.parse import urlparse
 
+def parse_url(url):
+    """
+    Parse a URL and return the domain and path
+    """
+    url_obj = urlparse(url)
+    return {
+        'domain': url_obj.netloc,
+        'path': url_obj.path
+    }
 def check_spf(spf_header):
     """
     Check SPF (Sender Policy Framework) authentication results.
@@ -329,6 +339,7 @@ def check_all_authentication(headers):
             'sender_mismatch': mismatch_result
         }
     }
+
 _all_ = [
     'check_spf',
     'check_dkim',
