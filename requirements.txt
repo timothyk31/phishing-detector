@@ -5,3 +5,5 @@ pyspf
 dkimpy
 dnspython
 python-dotenv
+google-genai==0.2.2
+Werkzeug==3.0.1
