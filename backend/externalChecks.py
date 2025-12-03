@@ -1,6 +1,42 @@
 import os
 import requests
 from dotenv import load_dotenv
+from analysis import parse_url
+
+def check_url_scan(url):
+    ''' This function checks the URLs against the URLScan.io API.
+        It returns True if the URL is safe, False otherwise.
+    '''
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    env_file = os.path.join(current_dir, ".env")
+    if os.path.exists(env_file):
+        load_dotenv(env_file)
+        urlscan_api_key = os.getenv("URLSCAN_API_KEY")
+    else:
+        raise ValueError("No .env file found in the current directory.")
+    if not urlscan_api_key:
+        raise ValueError("URLScan.io API key not found in environment variables.")
+    
+    api_url = f"https://urlscan.io/api/v1/search/"
+    headers = {
+        "api-Key": urlscan_api_key,
+        "Content-Type": "application/json",
+    }
+
+    params = {
+        "q": f"page.domain:{parse_url(url)['domain']}",
+            "size": 100,
+            "datasource": "scans"
+        }
+
+        response = requests.get(api_url, headers=headers, params=params)
+        if response.status_code != 200:
+            raise Exception(f"Error checking URL: {response.status_code} - {response.text}")
+        result = response.json()
+
+    return result
+
+
 def checkSafeBrowsing(urls_to_check):
     ''' This function checks the URLs against Google's Safe Browsing API.
         It returns True if the URL is safe, False otherwise.
