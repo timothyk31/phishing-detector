@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from analysis import check_spf, check_dkim, check_dmarc, check_sender_mismatch, check_all_authentication
 from externalChecks import checkSafeBrowsing, check_url_scan
+from llmCall import call_llm
+
 app = Flask(__name__)
 
 def parse_eml_file(file_content):
@@ -150,13 +152,16 @@ def analyze_email():
         # Run all authentication checks
         parsed_data['authentication_result'] = check_all_authentication(parsed_data['headers'])
 
-        #Run Safe Browsing check on extracted URLs
+        # Run Safe Browsing check on extracted URLs
         if parsed_data['urls']:
             safebrowsing_result = checkSafeBrowsing(parsed_data['urls'])
             parsed_data['safebrowsing'] = safebrowsing_result
         else:
             parsed_data['safebrowsing'] = {}
 
+        # Call LLM for phishing analysis
+        llm_result = call_llm(parsed_data)
+        parsed_data['llm_analysis'] = llm_result
         
         # Write parsed data to a new local text file in the backend directory
         try:
@@ -174,10 +179,6 @@ def analyze_email():
             # If writing fails, attach the error to the parsed data but do not stop response
             parsed_data['_write_error'] = str(wf)
             saved_file_path = None
-        
-        # Here you would add your phishing detection logic
-
-        # For now, just return the parsed data
         
         resp = {
             'success': True,
