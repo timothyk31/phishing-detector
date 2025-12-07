@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import email
 from email import policy
 from email.parser import BytesParser
@@ -72,13 +72,19 @@ def parse_eml_file(file_content):
     
     urls_in_text = re.findall(url_pattern, body_text)
     urls_in_html = re.findall(url_pattern, body_html)
-    all_urls = list(set(urls_in_text + urls_in_html))  # Remove duplicates
-
-    for url in all_urls:
-        url_scan_result = check_url_scan(url)
-        if url_scan_result['results']:
-            all_urls[url] = url_scan_result['results']
-        else:
+    unique_urls = list(set(urls_in_text + urls_in_html))  # Remove duplicates
+    
+    # Convert to dict with URL scan results
+    all_urls = {}
+    for url in unique_urls:
+        try:
+            url_scan_result = check_url_scan(url)
+            if url_scan_result.get('results'):
+                all_urls[url] = url_scan_result['results']
+            else:
+                all_urls[url] = {}
+        except Exception as e:
+            # If URL scan fails, just store the URL (API key may be missing)
             all_urls[url] = {}
     
     # Extract attachments
@@ -154,14 +160,26 @@ def analyze_email():
 
         # Run Safe Browsing check on extracted URLs
         if parsed_data['urls']:
-            safebrowsing_result = checkSafeBrowsing(parsed_data['urls'])
-            parsed_data['safebrowsing'] = safebrowsing_result
+            # Extract URL keys (list) from the dict for Safe Browsing check
+            url_list = list(parsed_data['urls'].keys()) if isinstance(parsed_data['urls'], dict) else parsed_data['urls']
+            try:
+                safebrowsing_result = checkSafeBrowsing(url_list)
+                parsed_data['safebrowsing'] = safebrowsing_result
+            except Exception as e:
+                parsed_data['safebrowsing'] = {'error': str(e), 'message': 'Safe Browsing API check failed. Please configure GOOGLE_API_KEY in .env file.'}
         else:
             parsed_data['safebrowsing'] = {}
 
         # Call LLM for phishing analysis
-        llm_result = call_llm(parsed_data)
-        parsed_data['llm_analysis'] = llm_result
+        try:
+            llm_result = call_llm(parsed_data)
+            parsed_data['llm_analysis'] = llm_result
+        except Exception as e:
+            parsed_data['llm_analysis'] = {
+                'success': False,
+                'error': str(e),
+                'analysis': 'AI analysis unavailable. Please configure GEMINI_API_KEY in .env file.'
+            }
         
         # Write parsed data to a new local text file in the backend directory
         try:
@@ -193,6 +211,12 @@ def analyze_email():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/')
+def index():
+    """Serve the main webpage"""
+    return render_template('index.html')
 
 
 @app.route('/health', methods=['GET'])

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Email Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            text-align: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .file-name {
+            margin-top: 15px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .btn-analyze {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s, transform 0.2s;
+        }
+
+        .btn-analyze:hover:not(:disabled) {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-analyze:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .risk-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .risk-high {
+            background: #dc3545;
+            color: white;
+        }
+
+        .risk-medium {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .risk-low {
+            background: #28a745;
+            color: white;
+        }
+
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .check-item {
+            padding: 12px;
+            margin: 10px 0;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #ccc;
+        }
+
+        .check-item.pass {
+            border-left-color: #28a745;
+        }
+
+        .check-item.fail {
+            border-left-color: #dc3545;
+        }
+
+        .check-item.warning {
+            border-left-color: #ffc107;
+        }
+
+        .check-item h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .check-item p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .url-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .url-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .llm-analysis {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Phishing Email Detector</h1>
+            <p>AI-powered system to detect phishing emails</p>
+        </div>
+
+        <div class="card upload-section">
+            <h2>Upload Email File</h2>
+            <p style="color: #666; margin: 10px 0;">Select a .eml file to analyze for phishing indicators</p>
+            
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".eml" />
+                <label for="fileInput" class="file-input-label">
+                    📎 Choose .eml File
+                </label>
+            </div>
+            
+            <div class="file-name" id="fileName"></div>
+            
+            <button class="btn-analyze" id="analyzeBtn" onclick="analyzeEmail()" disabled>
+                🔍 Analyze Email
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Analyzing email... This may take a moment.</p>
+            </div>
+        </div>
+
+        <div class="card results" id="results">
+            <h2>Analysis Results</h2>
+            
+            <div id="overallRisk"></div>
+            
+            <div class="section">
+                <h3>Email Information</h3>
+                <div id="emailInfo"></div>
+            </div>
+
+            <div class="section">
+                <h3>Authentication Checks</h3>
+                <div id="authChecks"></div>
+            </div>
+
+            <div class="section">
+                <h3>URLs Found</h3>
+                <div id="urlsFound"></div>
+            </div>
+
+            <div class="section">
+                <h3>AI Analysis</h3>
+                <div id="llmAnalysis"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                fileName.textContent = `Selected: ${e.target.files[0].name}`;
+                analyzeBtn.disabled = false;
+            } else {
+                fileName.textContent = '';
+                analyzeBtn.disabled = true;
+            }
+        });
+
+        async function analyzeEmail() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Show loading, hide results
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze-email', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                displayResults(data.data);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        function displayResults(data) {
+            results.style.display = 'block';
+
+            // Overall Risk
+            const authResult = data.authentication_result || {};
+            const overallRisk = authResult.overall_risk_score || 0;
+            const overallStatus = authResult.overall_status || 'unknown';
+            
+            let riskClass = 'risk-low';
+            let riskText = 'Low Risk';
+            if (overallRisk >= 70) {
+                riskClass = 'risk-high';
+                riskText = 'High Risk';
+            } else if (overallRisk >= 40) {
+                riskClass = 'risk-medium';
+                riskText = 'Medium Risk';
+            }
+
+            document.getElementById('overallRisk').innerHTML = `
+                <div class="risk-badge ${riskClass}">
+                    Overall Risk Score: ${overallRisk.toFixed(1)}/100 - ${riskText}
+                </div>
+                <p style="margin-top: 10px; color: #666;">${authResult.overall_message || 'Analysis complete'}</p>
+            `;
+
+            // Email Information
+            const headers = data.headers || {};
+            document.getElementById('emailInfo').innerHTML = `
+                <p><strong>From:</strong> ${headers.from || 'N/A'}</p>
+                <p><strong>To:</strong> ${headers.to || 'N/A'}</p>
+                <p><strong>Subject:</strong> ${headers.subject || 'N/A'}</p>
+                <p><strong>Date:</strong> ${headers.date || 'N/A'}</p>
+            `;
+
+            // Authentication Checks
+            const checks = authResult.checks || {};
+            let authHtml = '';
+            
+            const checkItems = [
+                { key: 'spf', name: 'SPF Check' },
+                { key: 'dkim', name: 'DKIM Check' },
+                { key: 'dmarc', name: 'DMARC Check' },
+                { key: 'sender_mismatch', name: 'Sender Mismatch Check' }
+            ];
+
+            checkItems.forEach(item => {
+                const check = checks[item.key] || {};
+                let statusClass = 'warning';
+                if (check.status === 'pass' || check.status === 'match') {
+                    statusClass = 'pass';
+                } else if (check.is_suspicious) {
+                    statusClass = 'fail';
+                }
+
+                authHtml += `
+                    <div class="check-item ${statusClass}">
+                        <h4>${item.name}</h4>
+                        <p><strong>Status:</strong> ${check.status || 'unknown'}</p>
+                        <p><strong>Risk Score:</strong> ${check.risk_score || 0}/100</p>
+                        <p>${check.message || 'No message'}</p>
+                    </div>
+                `;
+            });
+
+            document.getElementById('authChecks').innerHTML = authHtml;
+
+            // URLs
+            const urls = data.urls || [];
+            let urlsHtml = '';
+            if (Array.isArray(urls)) {
+                if (urls.length > 0) {
+                    urlsHtml = '<ul class="url-list">';
+                    urls.forEach(url => {
+                        urlsHtml += `<li>${url}</li>`;
+                    });
+                    urlsHtml += '</ul>';
+                } else {
+                    urlsHtml = '<p>No URLs found in email</p>';
+                }
+            } else {
+                urlsHtml = '<ul class="url-list">';
+                Object.keys(urls).forEach(url => {
+                    urlsHtml += `<li>${url}</li>`;
+                });
+                urlsHtml += '</ul>';
+            }
+
+            // Safe Browsing results
+            const safeBrowsing = data.safebrowsing || {};
+            if (safeBrowsing.matches && safeBrowsing.matches.length > 0) {
+                urlsHtml += '<div style="margin-top: 15px; padding: 10px; background: #f8d7da; border-radius: 4px;">';
+                urlsHtml += '<strong>⚠️ Threats Detected by Google Safe Browsing:</strong><ul>';
+                safeBrowsing.matches.forEach(match => {
+                    urlsHtml += `<li>${match.threat?.url || 'N/A'} - ${match.threatType || 'Unknown threat'}</li>`;
+                });
+                urlsHtml += '</ul></div>';
+            }
+
+            document.getElementById('urlsFound').innerHTML = urlsHtml;
+
+            // LLM Analysis
+            const llmAnalysis = data.llm_analysis || {};
+            if (llmAnalysis.analysis) {
+                document.getElementById('llmAnalysis').innerHTML = `
+                    <div class="llm-analysis">${llmAnalysis.analysis}</div>
+                `;
+            } else {
+                document.getElementById('llmAnalysis').innerHTML = `
+                    <p>AI analysis not available</p>
+                `;
+            }
+        }
+
+        function showError(message) {
+            results.style.display = 'block';
+            results.innerHTML = `
+                <div class="error">
+                    <h3>Error</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
+

@@ -25,14 +25,14 @@ def check_url_scan(url):
 
     params = {
         "q": f"page.domain:{parse_url(url)['domain']}",
-            "size": 100,
-            "datasource": "scans"
-        }
+        "size": 100,
+        "datasource": "scans"
+    }
 
-        response = requests.get(api_url, headers=headers, params=params)
-        if response.status_code != 200:
-            raise Exception(f"Error checking URL: {response.status_code} - {response.text}")
-        result = response.json()
+    response = requests.get(api_url, headers=headers, params=params)
+    if response.status_code != 200:
+        raise Exception(f"Error checking URL: {response.status_code} - {response.text}")
+    result = response.json()
 
     return result
 
